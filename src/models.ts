@@ -157,3 +157,90 @@ export function makePad(color: number): THREE.Group {
   const r = mesh(new THREE.TorusGeometry(1.1, 0.07, 6, 30), toon(0xffffff), false); r.rotation.x = Math.PI / 2; r.position.y = 0.17; g.add(r);
   return g;
 }
+
+// ---------------- snacks (replace eggs) ----------------
+export function makeSnack(kind: 's' | 'm' | 'b', gold: boolean): THREE.Group {
+  const g = new THREE.Group();
+  const goldM = () => new THREE.MeshStandardMaterial({ color: 0xffcf33, metalness: 0.6, roughness: 0.25, emissive: 0x6b4a00, emissiveIntensity: 0.4 });
+  if (kind === 's') { // a big strawberry
+    const body = mesh(new THREE.SphereGeometry(0.38, 16, 12), gold ? goldM() : toon(0xff3b55)); body.scale.set(1, 1.15, 1); body.position.y = 0.42; g.add(body);
+    const tip = mesh(new THREE.ConeGeometry(0.3, 0.35, 14), gold ? goldM() : toon(0xff3b55)); tip.rotation.x = Math.PI; tip.position.y = 0.16; g.add(tip);
+    for (let i = 0; i < 14; i++) { const a = i * 2.4, y = 0.25 + (i % 4) * 0.12, r = 0.36 - Math.abs(y - 0.45) * 0.4; const sd = mesh(new THREE.SphereGeometry(0.03, 5, 4), toon(0xfff3a0), false); sd.position.set(Math.cos(a) * r, y, Math.sin(a) * r); g.add(sd); }
+    for (let i = 0; i < 5; i++) { const l = mesh(new THREE.ConeGeometry(0.09, 0.3, 4), toon(0x3fae46), false); l.rotation.z = Math.PI / 2.3; l.rotation.y = i * 1.26; l.position.set(Math.cos(i * 1.26) * 0.12, 0.84, -Math.sin(i * 1.26) * 0.12); g.add(l); }
+  } else if (kind === 'm') { // a honey pot
+    const pot = mesh(new THREE.CylinderGeometry(0.45, 0.4, 0.75, 18), gold ? goldM() : toon(0xffb020)); pot.position.y = 0.38; g.add(pot);
+    const band = mesh(new THREE.TorusGeometry(0.46, 0.05, 6, 20), toon(0x8a5a30), false); band.rotation.x = Math.PI / 2; band.position.y = 0.55; g.add(band);
+    const lid = mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.12, 18), toon(0xc98a4f)); lid.position.y = 0.8; g.add(lid);
+    const knob = mesh(new THREE.SphereGeometry(0.1, 8, 6), toon(0xc98a4f), false); knob.position.y = 0.9; g.add(knob);
+    const drip = mesh(new THREE.SphereGeometry(0.1, 8, 6), toon(0xffd23f), false); drip.scale.set(1, 1.6, 1); drip.position.set(0.3, 0.6, 0.3); g.add(drip);
+  } else { // a giant watermelon
+    const m = mesh(new THREE.SphereGeometry(1.25, 24, 18), gold ? goldM() : toon(0x2e9e44)); m.scale.set(1, 0.88, 1.15); m.position.y = 1.1; g.add(m);
+    for (let i = 0; i < 6; i++) { const s = mesh(new THREE.TorusGeometry(1.24, 0.07, 6, 30, Math.PI), toon(gold ? 0xfff0a0 : 0x1b6b2c), false); s.rotation.set(0, (i * Math.PI) / 6, 0); s.scale.set(1, 0.88, 1.15); s.position.y = 1.1; g.add(s); }
+    const stem = mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.25, 6), toon(0x7a4a26), false); stem.position.y = 2.2; g.add(stem);
+  }
+  return g;
+}
+
+// ---------------- camp animals (extra types) ----------------
+export function makeAnimal(type: string, gold = false): THREE.Group {
+  if (type === 'bunny' || type === 'turtle' || type === 'fox' || type === 'chick') return makePet(type as PetType, gold);
+  const g = new THREE.Group();
+  if (type === 'hen') { const h = makeHen(0.55, 0xffffff); h.bang.visible = false; g.add(h.root); return g; }
+  const col = type === 'bear' ? 0x9a6232 : type === 'raccoon' ? 0x8d959e : 0xd9a066;
+  const m = toon(col);
+  const body = mesh(new THREE.SphereGeometry(0.45, 16, 12), m); body.position.y = type === 'deer' ? 0.75 : 0.48; body.scale.set(1, 0.95, type === 'deer' ? 1.35 : 1.1); g.add(body);
+  const head = new THREE.Group(); head.position.set(0, type === 'deer' ? 1.3 : 0.92, type === 'deer' ? 0.5 : 0.25); g.add(head);
+  head.add(mesh(new THREE.SphereGeometry(0.3, 16, 12), m));
+  eyes(head, 0.06, 0.24, 0.12, 0.07);
+  const snout = mesh(new THREE.SphereGeometry(0.13, 10, 8), toon(type === 'raccoon' ? 0xeeeeee : 0xf0d0a0)); snout.scale.set(1, 0.8, 1); snout.position.set(0, -0.08, 0.27); head.add(snout);
+  const nose = mesh(new THREE.SphereGeometry(0.05, 8, 6), toon(0x222222), false); nose.position.set(0, -0.04, 0.4); head.add(nose);
+  if (type === 'bear') for (const s of [-1, 1]) { const e = mesh(new THREE.SphereGeometry(0.11, 10, 8), m); e.position.set(s * 0.22, 0.24, -0.02); head.add(e); }
+  if (type === 'raccoon') {
+    const mask = mesh(new THREE.TorusGeometry(0.14, 0.05, 6, 14), toon(0x2b2b38), false); mask.scale.set(1.6, 0.6, 1); mask.position.set(0, 0.06, 0.24); head.add(mask);
+    for (const s of [-1, 1]) { const e = mesh(new THREE.ConeGeometry(0.1, 0.22, 4), m); e.position.set(s * 0.18, 0.28, -0.04); head.add(e); }
+    for (let i = 0; i < 4; i++) { const t = mesh(new THREE.SphereGeometry(0.13 - i * 0.012, 10, 8), toon(i % 2 ? 0x2b2b38 : 0xb8c0c8)); t.position.set(0, 0.5 + i * 0.05, -0.5 - i * 0.16); g.add(t); }
+  }
+  if (type === 'deer') {
+    const am = gold ? new THREE.MeshStandardMaterial({ color: 0xffcf33, metalness: 0.6, roughness: 0.25, emissive: 0x6b4a00, emissiveIntensity: 0.4 }) : toon(0xffe9a8);
+    for (const s of [-1, 1]) { const a = mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.45, 6), am); a.position.set(s * 0.14, 0.42, -0.05); a.rotation.z = -s * 0.4; head.add(a); const b = mesh(new THREE.CylinderGeometry(0.025, 0.03, 0.22, 6), am); b.position.set(s * 0.24, 0.55, -0.02); b.rotation.z = s * 0.5; head.add(b); }
+    for (let i = 0; i < 5; i++) { const sp = mesh(new THREE.SphereGeometry(0.05, 6, 4), toon(0xffffff), false); sp.position.set((i % 2 ? 0.2 : -0.2) * (i / 4), 1.05, 0.2 - i * 0.2); g.add(sp); }
+  }
+  for (const [x, z] of [[-0.25, 0.25], [0.25, 0.25], [-0.25, -0.25], [0.25, -0.25]]) { const l = mesh(new THREE.CylinderGeometry(0.07, 0.08, type === 'deer' ? 0.6 : 0.25, 8), m); l.position.set(x, type === 'deer' ? 0.3 : 0.12, z * (type === 'deer' ? 1.4 : 1)); g.add(l); }
+  if (gold) { const sp = textSprite('✦', { size: 80, color: '#fff7b0', scale: 0.5 }); sp.position.set(0.4, 1.6, 0); g.add(sp); }
+  return g;
+}
+
+// ---------------- building pieces ----------------
+const tex = (draw: (x: CanvasRenderingContext2D) => void) => { const c = document.createElement('canvas'); c.width = c.height = 32; draw(c.getContext('2d')!); const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace; return t; };
+const noisy = (base: string, dots: string[], n = 60) => tex((x) => { x.fillStyle = base; x.fillRect(0, 0, 32, 32); for (let i = 0; i < n; i++) { x.fillStyle = dots[i % dots.length]; x.fillRect((Math.random() * 8 | 0) * 4, (Math.random() * 8 | 0) * 4, 4, 4); } });
+const lamT = (t: THREE.Texture, extra: Partial<THREE.MeshLambertMaterialParameters> = {}) => new THREE.MeshLambertMaterial({ map: t, ...extra });
+let BM: Record<string, THREE.Material | THREE.Material[]> | null = null;
+export function blockMaterial(id: string): THREE.Material | THREE.Material[] {
+  if (!BM) {
+    const grassTop = lamT(noisy('#6fd65a', ['#5cc24a', '#86e66b'])), dirt = lamT(noisy('#a8703f', ['#8f5c31', '#bd8550'])), grassSide = lamT(tex((x) => { x.fillStyle = '#a8703f'; x.fillRect(0, 0, 32, 32); x.fillStyle = '#8f5c31'; for (let i = 0; i < 30; i++) x.fillRect((Math.random() * 8 | 0) * 4, (Math.random() * 8 | 0) * 4, 4, 4); x.fillStyle = '#6fd65a'; x.fillRect(0, 0, 32, 8); for (let i = 0; i < 8; i++) x.fillRect(i * 4, 8, 4, (Math.random() * 3 | 0) * 4); }));
+    const wood = lamT(tex((x) => { x.fillStyle = '#c98a4f'; x.fillRect(0, 0, 32, 32); x.fillStyle = '#a8703f'; for (let y = 0; y < 32; y += 8) x.fillRect(0, y, 32, 2); x.fillRect(12, 0, 2, 8); x.fillRect(26, 8, 2, 8); x.fillRect(6, 16, 2, 8); x.fillRect(20, 24, 2, 8); }));
+    const stone = lamT(noisy('#a9b0b8', ['#8d959e', '#c3c9d0'], 50));
+    const brick = lamT(tex((x) => { x.fillStyle = '#d9583b'; x.fillRect(0, 0, 32, 32); x.fillStyle = '#f2e6d0'; for (let y = 0; y < 32; y += 8) { x.fillRect(0, y, 32, 1.5); for (let k = (y / 8) % 2 ? 0 : 8; k < 32; k += 16) x.fillRect(k, y, 1.5, 8); } }));
+    BM = { grass: [grassSide, grassSide, grassTop, dirt, grassSide, grassSide], wood, stone, brick, glass: new THREE.MeshLambertMaterial({ color: 0xbff0ff, transparent: true, opacity: 0.45 }) };
+  }
+  return BM[id];
+}
+export const blockGeo = new THREE.BoxGeometry(1, 1, 1);
+export function makeSpecial(id: string): THREE.Group {
+  const g = new THREE.Group();
+  if (id === 'flower') { const bush = mesh(new THREE.SphereGeometry(0.32, 10, 8), toon(0x3fae46)); bush.scale.y = 0.7; bush.position.y = 0.2; g.add(bush); for (let i = 0; i < 6; i++) { const f = mesh(new THREE.SphereGeometry(0.09, 8, 6), toon([0xff5d8f, 0xffd23f, 0xffffff, 0xb46bff][i % 4]), false); const a = i * 1.05; f.position.set(Math.cos(a) * 0.22, 0.34 + (i % 2) * 0.06, Math.sin(a) * 0.22); g.add(f); } }
+  if (id === 'pond') { const w = mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.06, 20), new THREE.MeshStandardMaterial({ color: 0x3ab0ff, roughness: 0.1 }), false); w.position.y = 0.04; g.add(w); const rim = mesh(new THREE.TorusGeometry(0.48, 0.06, 6, 20), toon(0xa9b0b8), false); rim.rotation.x = Math.PI / 2; rim.position.y = 0.06; g.add(rim); const lily = mesh(new THREE.CircleGeometry(0.12, 10), toon(0x3fae46), false); lily.rotation.x = -Math.PI / 2; lily.position.set(0.15, 0.08, 0.1); g.add(lily); }
+  if (id === 'birdhouse') { const p = mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.2, 6), toon(0x8a5a30)); p.position.y = 0.6; g.add(p); const h = mesh(new THREE.BoxGeometry(0.45, 0.45, 0.45), toon(0x5bd6ff)); h.position.y = 1.4; g.add(h); const r = mesh(new THREE.ConeGeometry(0.42, 0.3, 4), toon(0xe0533d)); r.rotation.y = Math.PI / 4; r.position.y = 1.78; g.add(r); const hole = mesh(new THREE.CircleGeometry(0.08, 10), toon(0x222222), false); hole.position.set(0, 1.42, 0.23); g.add(hole); }
+  if (id === 'swing') { for (const s of [-1, 1]) { const l = mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.6, 6), toon(0xc98a4f)); l.position.set(s * 0.42, 0.8, 0); l.rotation.z = s * 0.1; g.add(l); } const top = mesh(new THREE.CylinderGeometry(0.04, 0.04, 1, 6), toon(0xc98a4f)); top.rotation.z = Math.PI / 2; top.position.y = 1.6; g.add(top); const seat = new THREE.Group(); seat.position.y = 1.6; seat.name = 'seat'; g.add(seat); for (const s of [-1, 1]) { const r = mesh(new THREE.CylinderGeometry(0.01, 0.01, 1.1, 4), toon(0xffffff), false); r.position.set(s * 0.18, -0.55, 0); seat.add(r); } const b = mesh(new THREE.BoxGeometry(0.45, 0.06, 0.25), toon(0xff5d8f)); b.position.y = -1.1; seat.add(b); }
+  if (id === 'hay') { const h = mesh(new THREE.BoxGeometry(0.9, 0.35, 0.9), toon(0xffd97a)); h.position.y = 0.18; g.add(h); for (let i = 0; i < 6; i++) { const st = mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.4, 4), toon(0xe8c56a), false); st.position.set((Math.random() - 0.5) * 0.8, 0.38, (Math.random() - 0.5) * 0.8); st.rotation.set(Math.random(), 0, 1.3); g.add(st); } }
+  return g;
+}
+export function makePantry(): THREE.Group {
+  const g = new THREE.Group();
+  const base = mesh(new THREE.BoxGeometry(3.2, 1, 1.6), toon(0xc98a4f)); base.position.y = 0.5; g.add(base);
+  for (const x of [-1.5, 1.5]) { const p = mesh(new THREE.BoxGeometry(0.15, 2.4, 0.15), toon(0x8a5a30)); p.position.set(x, 1.2, -0.7); g.add(p); }
+  const roof = mesh(new THREE.BoxGeometry(3.6, 0.15, 2), toon(0xe0533d)); roof.position.set(0, 2.45, -0.2); roof.rotation.x = 0.15; g.add(roof);
+  for (let i = 0; i < 5; i++) { const s = mesh(new THREE.BoxGeometry(3.6 / 5, 0.16, 2.02), toon(0xffffff)); s.position.set(-1.44 + i * 0.72, 2.46, -0.2); s.rotation.x = 0.15; if (i % 2) g.add(s); }
+  const sign = textSprite('🧺 PANTRY', { size: 44, bg: '#8a5a30', scale: 0.6 }); sign.position.set(0, 3, 0); g.add(sign);
+  return g;
+}

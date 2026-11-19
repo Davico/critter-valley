@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Nest Raiders — prototype</title>
+<title>Critter Valley — prototype</title>
 <style>
 html,body{margin:0;height:100%;overflow:hidden;background:#87d4ff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-user-select:none;user-select:none;touch-action:none}
 canvas{display:block;touch-action:none}
@@ -18,7 +18,25 @@ canvas{display:block;touch-action:none}
 #card.gold{background:linear-gradient(#fff3b0,#ffcf33)}
 #tread{bottom:24px;left:50%;transform:translateX(-50%);width:260px;height:18px;background:rgba(0,0,0,.4);border-radius:10px;display:none;overflow:hidden}
 #tread i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7dff8a,#ffe14a);border-radius:10px}
-#reset{position:fixed;top:12px;right:12px;pointer-events:auto;background:rgba(10,30,50,.55);color:#fff;border:0;border-radius:12px;padding:8px 12px;font-weight:800;cursor:pointer}
+#topbtns{position:fixed;top:12px;right:12px;display:flex;gap:8px;z-index:3}
+#topbtns button{pointer-events:auto;background:rgba(10,30,50,.55);color:#fff;border:0;border-radius:14px;padding:8px 12px;font-size:22px;font-weight:800;cursor:pointer}
+#reset{font-size:16px!important}
+body.building #bBuild{background:#ffb020}
+#palette{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);display:none;gap:6px;background:rgba(10,30,50,.55);padding:6px;border-radius:16px;z-index:3}
+body.building #palette{display:flex}
+#palette button{width:52px;height:58px;border:3px solid transparent;border-radius:12px;background:rgba(255,255,255,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;padding:0}
+#palette button span{font-size:26px;line-height:1}#palette button small{font-size:10px;font-weight:800;color:#444}
+#palette button.sel{border-color:#ffb020;background:#fff6d6;transform:translateY(-4px)}
+body.building #help,body.building .btn{display:none!important}
+#book{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,30,50,.55);z-index:6}
+#book .inner{background:#fff8e1;border-radius:24px;padding:16px 20px;max-width:min(94vw,760px);max-height:90vh;overflow:auto;text-align:center;color:#4a2f00}
+#book h2{margin:4px 0}#book p{margin:4px 0 12px;font-weight:700;font-size:14px}
+#bookPages{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.pg{background:#fff;border-radius:16px;padding:10px;box-shadow:0 3px 0 #e8d7a8}.pg.fr{background:#e9ffe6;box-shadow:0 3px 0 #9fd99a}
+.pg .ic{font-size:40px}.pg b{display:block;font-size:16px}.pg small{display:block;font-size:11px;opacity:.75;margin-top:4px}
+.need{margin-top:6px;font-size:22px}.need span{opacity:.35;margin:0 2px;filter:grayscale(1)}.need span.ok{opacity:1;filter:none}
+.dots{font-size:16px;color:#e0621e;margin-top:4px;font-weight:800}
+#bookClose{margin-top:12px;background:#27a84c;color:#fff;border:0;border-radius:14px;padding:10px 26px;font-size:20px;font-weight:800;box-shadow:0 4px 0 #17702f;cursor:pointer}
 #help{position:fixed;bottom:12px;left:12px;font-size:13px;opacity:.85}
 .btn{position:fixed;pointer-events:auto;width:76px;height:76px;border-radius:50%;border:3px solid rgba(255,255,255,.85);background:rgba(10,30,50,.45);color:#fff;font-size:30px;display:none;align-items:center;justify-content:center}
 .btn.on{background:rgba(255,200,60,.8)}
@@ -33,20 +51,22 @@ body.touch #help{display:none}
 #start h1{color:#fff;font-size:56px;margin:0;text-shadow:0 5px 0 #1d6fb0}
 #start p{color:#1d4f8a;font-weight:800;font-size:20px}
 #start b{background:#27a84c;color:#fff;padding:14px 30px;border-radius:18px;font-size:26px;box-shadow:0 6px 0 #17702f}
-@media (max-height:480px),(max-width:600px){#hint{font-size:14px;top:52px;padding:6px 12px}.chip{font-size:14px;padding:5px 9px}#card .t{font-size:24px}#card .s{font-size:13px}.btn{width:62px;height:62px;font-size:24px}#bJump{width:74px;height:74px}#bRoll{right:104px}#bAct{bottom:110px}}
+@media (max-height:480px),(max-width:600px){#palette button{width:40px;height:46px}#palette button span{font-size:20px}#topbtns button{font-size:18px;padding:6px 9px}#hint{font-size:14px;top:52px;padding:6px 12px}.chip{font-size:14px;padding:5px 9px}#card .t{font-size:24px}#card .s{font-size:13px}.btn{width:62px;height:62px;font-size:24px}#bJump{width:74px;height:74px}#bRoll{right:104px}#bAct{bottom:110px}}
 </style>
 </head>
 <body>
-<div id="stats" class="hud"><span class="chip" id="coins">🪙 0</span><span class="chip" id="speed">⚡ Speed 0</span><span class="chip" id="carry"></span><span class="chip" id="pets">🐾 0</span></div>
+<div id="stats" class="hud"><span class="chip" id="coins">🪙 0</span><span class="chip" id="speed">⚡ Speed 0</span><span class="chip" id="carry"></span><span class="chip" id="pantry">🧺</span><span class="chip" id="pets">🐾 0</span></div>
 <div id="hint" class="hud"></div>
 <div id="prompt" class="hud"></div>
 <div id="card" class="hud"><div class="t"></div><div class="s"></div></div>
 <div id="tread" class="hud"><i></i></div>
-<div id="help" class="hud">WASD/arrows move · SPACE jump · hold SHIFT roll · E buddy · drag mouse to look</div>
-<button id="reset" title="Start over">↺</button>
+<div id="help" class="hud">WASD move · SPACE jump · SHIFT roll · E buddy · B build (click place, right-click remove, 1–0 pick) · P book · drag to look</div>
+<div id="topbtns"><button id="bBuild" title="Build (B)">🧱</button><button id="bBook" title="Friend book (P)">📖</button><button id="reset" title="Start over">↺</button></div>
+<div id="palette"></div>
+<div id="book"><div class="inner"><h2>📖 My Friends</h2><p>Build what they like + keep their snack in the 🧺 Pantry. 3 visits = a friend!</p><div id="bookPages"></div><button id="bookClose">✔ OK</button></div></div>
 <div id="stick"><div id="knob"></div></div>
 <div class="btn" id="bAct">✋</div><div class="btn" id="bRoll">🌀</div><div class="btn" id="bJump">▲</div>
-<div id="start"><h1>NEST RAIDERS</h1><p>prototype · grab eggs, outrun the hens, hatch pets</p><b>▶ PLAY</b></div>
+<div id="start"><h1>CRITTER VALLEY</h1><p>roll · grab snacks · build · make friends</p><b>▶ PLAY</b></div>
 <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
