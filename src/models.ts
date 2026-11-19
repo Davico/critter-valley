@@ -11,7 +11,7 @@ function eyes(g: THREE.Group, y: number, z: number, sep: number, r: number) {
 }
 
 // ---------------- hero: a little armadillo that can curl into a ball ----------------
-export interface HeroMesh { root: THREE.Group; walk: THREE.Group; ball: THREE.Group; legs: THREE.Mesh[]; hold: THREE.Object3D }
+export interface HeroMesh { root: THREE.Group; walk: THREE.Group; ball: THREE.Group; spin: THREE.Group; legs: THREE.Mesh[]; hold: THREE.Object3D }
 export function makeHero(): HeroMesh {
   const root = new THREE.Group(), walk = new THREE.Group(), ball = new THREE.Group();
   const shell = toon(0xc98a4f), skin = toon(0xf0c48e), band = toon(0x9a6232);
@@ -29,12 +29,18 @@ export function makeHero(): HeroMesh {
   const legs: THREE.Mesh[] = [];
   for (const [x, z] of [[-0.3, 0.3], [0.3, 0.3], [-0.3, -0.3], [0.3, -0.3]]) { const l = mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.4, 8), skin); l.position.set(x, 0.2, z); walk.add(l); legs.push(l); }
   const hold = new THREE.Object3D(); hold.position.set(0, 1.85, 0.1); walk.add(hold);
-  // ball form
-  const b = mesh(sph(0.62, 20, 16), shell); b.position.y = 0.62; ball.add(b);
-  for (let i = 0; i < 4; i++) { const r = mesh(new THREE.TorusGeometry(0.62, 0.05, 6, 24), band, false); r.position.y = 0.62; r.rotation.y = (i * Math.PI) / 4; ball.add(r); }
+  // ball form: the shell spins, the little face peeks out in front and stays upright
+  const spin = new THREE.Group(); spin.position.y = 0.72; ball.add(spin);
+  spin.add(mesh(sph(0.64, 22, 16), shell));
+  for (let i = 0; i < 4; i++) { const r = mesh(new THREE.TorusGeometry(0.64, 0.055, 6, 26), band, false); r.rotation.y = Math.PI / 2; r.rotation.x = (i * Math.PI) / 4; spin.add(r); }
+  const peek = new THREE.Group(); peek.position.set(0, 0.78, 0.5); ball.add(peek);
+  const ph = mesh(sph(0.22), skin); ph.scale.set(1, 0.9, 0.8); peek.add(ph);
+  const ps = mesh(new THREE.ConeGeometry(0.1, 0.26, 10), skin); ps.rotation.x = Math.PI / 2; ps.position.set(0, -0.04, 0.24); peek.add(ps);
+  eyes(peek, 0.06, 0.13, 0.09, 0.06);
+  const pm = mesh(new THREE.TorusGeometry(0.13, 0.035, 6, 14), toon(0x2b2b38), false); pm.scale.set(1.5, 0.55, 1); pm.position.set(0, 0.06, 0.15); peek.add(pm);
   ball.visible = false;
   root.add(walk, ball);
-  return { root, walk, ball, legs, hold };
+  return { root, walk, ball, spin, legs, hold };
 }
 
 // ---------------- hen guardian ----------------

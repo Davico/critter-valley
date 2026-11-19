@@ -467,7 +467,7 @@ function animateHero(dt: number) {
   if (sp > 0.4 && !P.onTread && P.dizzy <= 0) P.face = angleLerp(P.face, Math.atan2(P.vel.x, P.vel.z), Math.min(1, (P.rolling ? 6 : 14) * dt));
   hero.root.position.copy(P.pos); hero.root.rotation.y = P.face;
   hero.walk.visible = !P.rolling; hero.ball.visible = P.rolling;
-  if (P.rolling) hero.ball.rotation.x += (sp * dt) / 0.62;
+  if (P.rolling) { hero.spin.rotation.x += (sp * dt) / 0.64; if (P.grounded && sp > 3 && Math.random() < sp * dt * 1.5) burst(P.pos.clone().add(new V3(rnd(-0.3, 0.3), 0.1, rnd(-0.3, 0.3))), [0xe9dcc0, 0xffffff], 2, 1.2, 1.5, true); }
   else { if (!P.onTread) P.walkPh += dt * sp * 2.2; hero.legs.forEach((l, i) => (l.rotation.x = Math.sin(P.walkPh + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI : 0)) * (sp > 0.4 || P.onTread ? 0.8 : 0))); hero.walk.position.y = sp > 0.4 || P.onTread ? Math.abs(Math.sin(P.walkPh)) * 0.08 : 0; hero.walk.rotation.z = P.dizzy > 0 ? Math.sin(time * 20) * 0.2 : 0; }
   P.squash += (0 - P.squash) * Math.min(1, 10 * dt);
   hero.root.scale.set(1 + P.squash * 0.6, 1 - P.squash, 1 + P.squash * 0.6);
