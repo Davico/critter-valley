@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Nest Raiders — prototype</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#87d4ff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-user-select:none;user-select:none;touch-action:none}
+canvas{display:block;touch-action:none}
+.hud{position:fixed;pointer-events:none;color:#fff;font-weight:800;text-shadow:0 2px 0 rgba(0,0,0,.35)}
+#stats{top:12px;left:12px;display:flex;gap:8px;flex-wrap:wrap}
+.chip{background:rgba(10,30,50,.55);border-radius:14px;padding:7px 12px;font-size:18px}
+#hint{top:62px;left:50%;transform:translateX(-50%);background:rgba(10,30,50,.62);border-radius:16px;padding:10px 18px;font-size:19px;max-width:min(90vw,720px);text-align:center;opacity:0;transition:opacity .25s}
+#prompt{bottom:140px;left:50%;transform:translateX(-50%);background:rgba(46,158,68,.9);border-radius:14px;padding:8px 14px;font-size:16px;display:none}
+#card{top:30%;left:50%;transform:translate(-50%,-50%) scale(.6);background:linear-gradient(#fff8e1,#ffe7a3);color:#4a2f00;text-shadow:none;border-radius:22px;padding:18px 28px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.35);opacity:0;transition:all .25s}
+#card.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#card .t{font-size:34px}#card .s{font-size:17px;margin-top:6px;opacity:.85}
+#card.gold{background:linear-gradient(#fff3b0,#ffcf33)}
+#tread{bottom:24px;left:50%;transform:translateX(-50%);width:260px;height:18px;background:rgba(0,0,0,.4);border-radius:10px;display:none;overflow:hidden}
+#tread i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7dff8a,#ffe14a);border-radius:10px}
+#reset{position:fixed;top:12px;right:12px;pointer-events:auto;background:rgba(10,30,50,.55);color:#fff;border:0;border-radius:12px;padding:8px 12px;font-weight:800;cursor:pointer}
+#help{position:fixed;bottom:12px;left:12px;font-size:13px;opacity:.85}
+.btn{position:fixed;pointer-events:auto;width:76px;height:76px;border-radius:50%;border:3px solid rgba(255,255,255,.85);background:rgba(10,30,50,.45);color:#fff;font-size:30px;display:none;align-items:center;justify-content:center}
+.btn.on{background:rgba(255,200,60,.8)}
+#bJump{right:22px;bottom:30px;width:92px;height:92px}
+#bRoll{right:126px;bottom:22px}
+#bAct{right:40px;bottom:136px;width:64px;height:64px;font-size:24px}
+#stick{position:fixed;width:120px;height:120px;border-radius:50%;border:3px solid rgba(255,255,255,.6);background:rgba(10,30,50,.25);display:none;pointer-events:none}
+#knob{position:absolute;left:36px;top:36px;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.85)}
+body.touch .btn{display:flex}
+body.touch #help{display:none}
+#start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:linear-gradient(#5ec8ff,#bff0ff);z-index:5;cursor:pointer}
+#start h1{color:#fff;font-size:56px;margin:0;text-shadow:0 5px 0 #1d6fb0}
+#start p{color:#1d4f8a;font-weight:800;font-size:20px}
+#start b{background:#27a84c;color:#fff;padding:14px 30px;border-radius:18px;font-size:26px;box-shadow:0 6px 0 #17702f}
+@media (max-height:480px),(max-width:600px){#hint{font-size:14px;top:52px;padding:6px 12px}.chip{font-size:14px;padding:5px 9px}#card .t{font-size:24px}#card .s{font-size:13px}.btn{width:62px;height:62px;font-size:24px}#bJump{width:74px;height:74px}#bRoll{right:104px}#bAct{bottom:110px}}
+</style>
+</head>
+<body>
+<div id="stats" class="hud"><span class="chip" id="coins">🪙 0</span><span class="chip" id="speed">⚡ Speed 0</span><span class="chip" id="carry"></span><span class="chip" id="pets">🐾 0</span></div>
+<div id="hint" class="hud"></div>
+<div id="prompt" class="hud"></div>
+<div id="card" class="hud"><div class="t"></div><div class="s"></div></div>
+<div id="tread" class="hud"><i></i></div>
+<div id="help" class="hud">WASD/arrows move · SPACE jump · hold SHIFT roll · E buddy · drag mouse to look</div>
+<button id="reset" title="Start over">↺</button>
+<div id="stick"><div id="knob"></div></div>
+<div class="btn" id="bAct">✋</div><div class="btn" id="bRoll">🌀</div><div class="btn" id="bJump">▲</div>
+<div id="start"><h1>NEST RAIDERS</h1><p>prototype · grab eggs, outrun the hens, hatch pets</p><b>▶ PLAY</b></div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>
