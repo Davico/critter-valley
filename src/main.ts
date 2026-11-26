@@ -93,7 +93,7 @@ PALETTE.forEach((t, i) => { const b = document.createElement('button'); b.innerH
 function selectTool(i: number) { if (i < 0 || i >= PALETTE.length) return; build.tool = i; [...elPal.children].forEach((c, k) => c.classList.toggle('sel', k === i)); }
 function refreshPalette() { [...elPal.children].forEach((c, k) => c.classList.toggle('locked', toolLocked(PALETTE[k]))); }
 selectTool(0); refreshPalette();
-function toggleBuild() { if (!build.on && state.biome().id !== 'valley') { hud.hint = 'You can build in your camp in the valley!'; hud.hintT = 2.5; return; } setBuild(!build.on); refreshPalette(); document.body.classList.toggle('building', build.on); if (!build.on) hover(null); }
+function toggleBuild() { setBuild(!build.on); refreshPalette(); document.body.classList.toggle('building', build.on); if (!build.on) hover(null); }
 let bookOpen = false;
 function toggleBook() {
   bookOpen = !bookOpen; elBook.style.display = bookOpen ? 'flex' : 'none'; if (!bookOpen) return;

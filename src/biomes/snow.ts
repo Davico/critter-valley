@@ -93,6 +93,6 @@ export const snow: Biome = {
     return null;
   },
   startTip: 'Brrr! Grab a 🍪 cookie from the grumpy ram — watch out, rams CHARGE!',
-  portal: [0, 26],
+  portal: [27, 14],
   build,
 };

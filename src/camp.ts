@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BOXES, groundAt, textSprite, toon, mesh, type Box } from './world';
+import { BOXES, groundAt, terrainH, textSprite, toon, mesh, type Box } from './world';
 import { blockGeo, blockMaterial, makeAnimal, makePantry, makeSpecial } from './models';
 import { S, save, pantry, addPantry } from './save';
 import { FOOD_ICON, type Food } from './snacks';
@@ -31,7 +31,7 @@ export const PALETTE: Tool[] = [
 ];
 const TOOL: Record<string, Tool> = Object.fromEntries(PALETTE.map((t) => [t.id, t]));
 export { FOOD_ICON };
-export const toolLocked = (t: Tool) => !!t.biome && !S.visited.includes(t.biome);
+export const toolLocked = (t: Tool) => (!!t.biome && !S.visited.includes(t.biome)) || (S.area !== 'valley' && !t.block && t.id !== 'erase');
 
 // ---------------- animals ----------------
 export interface AnimalDef { type: string; name: string; icon: string; food: Food; needs: { id: string; n: number }[]; power: string; biome: 'valley' | 'snow'; ride?: { speed: number; jump: number; seat: number } }
@@ -59,13 +59,21 @@ export const VISITS_TO_FRIEND = 3;
 export const ZONE = { x0: -17, x1: 12, z0: 5, z1: 24, ymax: 7 };
 const PANTRY = { x: -10, z: 8.5 };
 const inPantry = (ix: number, iz: number) => ix >= PANTRY.x - 2 && ix <= PANTRY.x + 1 && iz >= 7 && iz <= 9;
-const inZone = (ix: number, iz: number) => ix >= ZONE.x0 && ix <= ZONE.x1 && iz >= ZONE.z0 && iz <= ZONE.z1 && !inPantry(ix, iz);
+let area = 'valley';
+const WILD = { x0: -39, x1: 38, z0: -171, z1: 28 };
+const inZone = (ix: number, iz: number) => area === 'valley'
+  ? ix >= ZONE.x0 && ix <= ZONE.x1 && iz >= ZONE.z0 && iz <= ZONE.z1 && !inPantry(ix, iz)
+  : ix >= WILD.x0 && ix <= WILD.x1 && iz >= WILD.z0 && iz <= WILD.z1 && !(Math.abs(ix + 10) < 3 && Math.abs(iz - 10) < 2) && !(Math.abs(ix - 27) < 2 && Math.abs(iz - 14) < 4);
+/** the voxel layer a block on bare ground sits in */
+const groundIy = (ix: number, iz: number) => Math.round(terrainH(ix + 0.5, iz + 0.5));
+const savedList = () => (area === 'valley' ? S.build : (S.builds[area] ??= []));
 
 interface Voxel { id: string; obj: THREE.Object3D; box: Box | null }
 const vox = new Map<string, Voxel>();
 const key = (x: number, y: number, z: number) => `${x},${y},${z}`;
 export function count(id: string) { let n = 0; for (const v of vox.values()) if (id === 'blocks' ? TOOL[v.id]?.block : v.id === id) n++; return n; }
-const needMet = (d: AnimalDef) => d.needs.every((n) => count(n.id) >= n.n);
+export function countCamp(id: string) { return S.build.filter((b) => (id === 'blocks' ? TOOL[b[3]]?.block : b[3] === id)).length; }
+const needMet = (d: AnimalDef) => d.needs.every((n) => countCamp(n.id) >= n.n);
 
 let scene: THREE.Scene;
 let Pref: { pos: THREE.Vector3 };
@@ -86,14 +94,16 @@ function addVoxel(ix: number, iy: number, iz: number, id: string) {
   scene.add(obj); vox.set(key(ix, iy, iz), { id, obj, box });
 }
 function removeVoxel(k: string) { const v = vox.get(k)!; scene.remove(v.obj); if (v.box) BOXES.splice(BOXES.indexOf(v.box), 1); vox.delete(k); }
-function persist() { S.build = [...vox.entries()].map(([k, v]) => { const [x, y, z] = k.split(',').map(Number); return [x, y, z, v.id] as [number, number, number, string]; }); save(); }
+function persist() { const list = [...vox.entries()].map(([k, v]) => { const [x, y, z] = k.split(',').map(Number); return [x, y, z, v.id] as [number, number, number, string]; }); if (area === 'valley') S.build = list; else S.builds[area] = list; save(); }
 
 /** Place the current tool at a voxel. Returns true on success. */
 export function place(ix: number, iy: number, iz: number, id = PALETTE[build.tool].id): boolean {
   const t = TOOL[id];
   if (id === 'erase') return erase(ix, iy, iz);
-  if (!inZone(ix, iz) || iy < 0 || iy > ZONE.ymax || vox.has(key(ix, iy, iz))) { sfx.no(); return false; }
-  if (!t.block) { const below = vox.get(key(ix, iy - 1, iz)); if (iy > 0 && !(below && TOOL[below.id].block)) { sfx.no(); return false; } }
+  const gy = groundIy(ix, iz);
+  if (!inZone(ix, iz) || iy < gy || iy > gy + ZONE.ymax || vox.has(key(ix, iy, iz))) { sfx.no(); return false; }
+  if (!t.block && area !== 'valley') { sfx.no(); say(`${t.icon} goes in your camp in the valley — that's where animals visit!`); return false; }
+  if (!t.block) { const below = vox.get(key(ix, iy - 1, iz)); if (iy > gy && !(below && TOOL[below.id].block)) { sfx.no(); return false; } }
   else { const p = Pref.pos; if (p.x + 0.45 > ix && p.x - 0.45 < ix + 1 && p.z + 0.45 > iz && p.z - 0.45 < iz + 1 && p.y < iy + 1 && p.y + 1.6 > iy) { sfx.no(); return false; } }
   if (vox.size >= 400) { say('Your camp is full of blocks!'); return false; }
   if (toolLocked(t)) { sfx.no(); say(`${t.icon} ${t.name} comes from Snow Mountain — visit it first!`); return false; }
@@ -115,7 +125,7 @@ export function pick(ray: THREE.Ray): { place: [number, number, number] | null; 
     p.add(d);
     const c: [number, number, number] = [Math.floor(p.x), Math.floor(p.y), Math.floor(p.z)];
     if (vox.has(key(...c))) return { place: prev && (prev[0] !== c[0] || prev[1] !== c[1] || prev[2] !== c[2]) ? prev : null, hit: c };
-    if (p.y <= 0) return { place: [c[0], 0, c[2]], hit: null };
+    if (p.y <= terrainH(p.x, p.z)) return { place: [c[0], groundIy(c[0], c[2]), c[2]], hit: null };
     prev = c;
   }
   return { place: null, hit: null };
@@ -135,10 +145,10 @@ export function hover(ray: THREE.Ray | null) {
 /** Keyboard building: the cell in front of the hero. */
 export function frontCell(face: number): [number, number, number] {
   const p = Pref.pos, ix = Math.floor(p.x + Math.sin(face) * 1.4), iz = Math.floor(p.z + Math.cos(face) * 1.4);
-  let iy = 0; while (vox.has(key(ix, iy, iz)) && iy <= ZONE.ymax) iy++;
+  const gy = groundIy(ix, iz); let iy = gy; while (vox.has(key(ix, iy, iz)) && iy <= gy + ZONE.ymax) iy++;
   return [ix, iy, iz];
 }
-export function setBuild(on: boolean) { build.on = on; if (!on) ghost.visible = false; if (on) hint('build', 'Click/tap to place. ⛏️ removes. Animals visit if you build what they like!', true); }
+export function setBuild(on: boolean) { build.on = on; if (!on) ghost.visible = false; if (on && area === 'valley') hint('build', 'Click/tap to place. ⛏️ removes. Animals visit if you build what they like!', true); if (on && area !== 'valley') hint('build-wild', 'Build walls to stop the rams — they bonk and get dizzy! Or build stairs and bridges. Animal items go in your camp.', true); }
 
 // ---------------- visitors & friends ----------------
 interface Critter { def: AnimalDef; m: THREE.Group; pos: THREE.Vector3; target: THREE.Vector3; state: 'in' | 'eat' | 'stay' | 'out' | 'home'; t: number; hop: number; coins: number; shown: number; label: THREE.Sprite | null; bubble: THREE.Sprite | null }
@@ -236,23 +246,23 @@ export function updateCamp(dt: number, P: { pos: THREE.Vector3; vel: THREE.Vecto
 export function bookData() {
   return ANIMALS.map((d) => {
     const r = S.animals[d.type] ?? { visits: 0, friend: false };
-    return { ...d, visits: r.visits, friend: r.friend, buddy: S.buddy === d.type, locked: !S.visited.includes(d.biome), foodHave: pantry(d.food), needs: d.needs.map((n) => ({ icon: n.id === 'blocks' ? '🧱' : TOOL[n.id].icon, n: n.n, have: count(n.id) })) };
+    return { ...d, visits: r.visits, friend: r.friend, buddy: S.buddy === d.type, locked: !S.visited.includes(d.biome), foodHave: pantry(d.food), needs: d.needs.map((n) => ({ icon: n.id === 'blocks' ? '🧱' : TOOL[n.id].icon, n: n.n, have: countCamp(n.id) })) };
   });
 }
 
 // ---------------- setup ----------------
 export function initCamp(sc: THREE.Scene, P: { pos: THREE.Vector3 }, full: boolean) {
   scene = sc; Pref = P; campFull = full;
-  vox.clear(); critters.length = 0; gifts.length = 0; ride.on = false; build.on = false;
-  if (!full) { const d = ANIMALS.find((a) => a.type === S.buddy); if (d && S.animals[d.type]?.friend) spawnCritter(d, 'home', P.pos.clone().add(new V3(1.5, 0, 2))); return; }
-  const pan = makePantry(); pan.position.set(PANTRY.x, 0, PANTRY.z); scene.add(pan);
-  BOXES.push({ x0: PANTRY.x - 1.6, x1: PANTRY.x + 1.6, z0: PANTRY.z - 0.8, z1: PANTRY.z + 0.8, y0: -1, top: 1 });
+  vox.clear(); critters.length = 0; gifts.length = 0; ride.on = false; build.on = false; area = S.area;
   ghostMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, depthWrite: false });
   ghost = new THREE.Group(); ghost.add(new THREE.Mesh(new THREE.BoxGeometry(1.02, 1.02, 1.02), ghostMat)); ghost.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.03, 1.03, 1.03)), new THREE.LineBasicMaterial({ color: 0xffffff })));
   ghost.visible = false; scene.add(ghost);
+  for (const [x, y, z, id] of savedList()) if (TOOL[id] && !vox.has(key(x, y, z))) addVoxel(x, y, z, id);
+  if (!full) { const d = ANIMALS.find((a) => a.type === S.buddy); if (d && S.animals[d.type]?.friend) spawnCritter(d, 'home', P.pos.clone().add(new V3(1.5, 0, 2))); return; }
+  const pan = makePantry(); pan.position.set(PANTRY.x, 0, PANTRY.z); scene.add(pan);
+  BOXES.push({ x0: PANTRY.x - 1.6, x1: PANTRY.x + 1.6, z0: PANTRY.z - 0.8, z1: PANTRY.z + 0.8, y0: -1, top: 1 });
   // build-zone corner markers
   for (const [x, z] of [[ZONE.x0, ZONE.z0], [ZONE.x1 + 1, ZONE.z0], [ZONE.x0, ZONE.z1 + 1], [ZONE.x1 + 1, ZONE.z1 + 1]]) { const p = mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.9, 6), toon(0xffd23f)); p.position.set(x, 0.45, z); scene.add(p); }
-  for (const [x, y, z, id] of S.build) if (TOOL[id] && !vox.has(key(x, y, z))) addVoxel(x, y, z, id);
   for (const d of ANIMALS) if (S.animals[d.type]?.friend) spawnCritter(d, 'home', new V3(rnd(-12, 8), 0, rnd(12, 22)));
 }
 export const pantryPos = new V3(PANTRY.x, 1.2, PANTRY.z);

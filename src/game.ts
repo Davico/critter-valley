@@ -6,7 +6,7 @@ import { S, save, addPantry } from './save';
 import { burst, floatText, hint, hud, say, card, shock, updateFx, setFxScene } from './fx';
 import { buddyIs, build, initCamp, pantryPos, updateCamp, friendsCount, ride, rideDef, buddyCritter } from './camp';
 import { BIOMES, type Biome } from './biomes';
-import { BUMPS, roadDist, PORTAL as VALLEY_PORTAL } from './biomes/meadow';
+import { BUMPS, roadDist } from './biomes/meadow';
 import { walls } from './biomes/snow';
 import type { NestDef } from './biomes/types';
 import { SNACKS, SNACK_R, FOOD_ICON, type Size } from './snacks';
@@ -74,7 +74,7 @@ function spawnGuard(N: NestDef, n: number) {
 export function loadArea(id: Biome['id'], arriving = false) {
   for (const o of [...scene.children]) if (!o.userData.keep) { scene.remove(o); o.traverse((c) => { const g = (c as THREE.Mesh).geometry; if (g && g.attributes?.position?.count > 5000) g.dispose(); }); }
   BOXES.length = 0; snacks.length = 0; guards.length = 0; respawns.length = 0;
-  biome = BIOMES[id]; setTerrain(biome.terrain, biome.surface);
+  biome = BIOMES[id]; S.area = id; setTerrain(biome.terrain, biome.surface);
   decoUpdate = biome.build(scene);
   scene.add(hero.root);
   biome.nests.forEach((N, n) => {
@@ -106,12 +106,12 @@ export function loadArea(id: Biome['id'], arriving = false) {
   // portal
   const [px, pz] = biome.portal, to: Biome['id'] = inValley() ? 'snow' : 'valley';
   const pm = makePortal(to === 'snow' ? 0x9fdcff : 0x7dff8a, to === 'snow' ? '❄️ SNOW MOUNTAIN' : '🌼 BACK TO THE VALLEY');
-  pm.root.position.set(px, terrainH(px, pz), pz); pm.root.rotation.y = inValley() ? -Math.PI / 2 : 0; scene.add(pm.root);
+  pm.root.position.set(px, terrainH(px, pz), pz); pm.root.rotation.y = -Math.PI / 2; scene.add(pm.root);
   portal = { ...pm, to, at: new V3(px, 0, pz) };
-  for (const s of [-1, 1]) BOXES.push(inValley() ? { x0: px - 0.4, x1: px + 0.4, z0: pz + s * 2.2 - 0.4, z1: pz + s * 2.2 + 0.4, y0: -1, top: 4.2 } : { x0: px + s * 2.2 - 0.4, x1: px + s * 2.2 + 0.4, z0: pz - 0.4, z1: pz + 0.4, y0: -1, top: 4.2 });
+  for (const s of [-1, 1]) BOXES.push({ x0: px - 0.4, x1: px + 0.4, z0: pz + s * 2.2 - 0.4, z1: pz + s * 2.2 + 0.4, y0: -1, top: 4.2 });
   // player
   const [sx, sz, sf] = biome.spawn;
-  if (arriving) { if (inValley()) P.pos.set(VALLEY_PORTAL.x - 3.5, 0, VALLEY_PORTAL.z); else P.pos.set(px, 0, pz - 4); P.face = inValley() ? -Math.PI / 2 : Math.PI; }
+  if (arriving) { P.pos.set(px - 3.5, 0, pz); P.face = -Math.PI / 2; }
   else { P.pos.set(sx, 0, sz); P.face = sf; }
   P.pos.y = groundAt(P.pos.x, P.pos.z, 50).g; P.vel.set(0, 0, 0); P.carry = null; P.snow = 0; P.safe.copy(P.pos); P.dizzy = 0; portalLatch = true;
   camYaw = P.face + Math.PI; camera.position.set(P.pos.x + Math.sin(camYaw) * 9.5, P.pos.y + 6, P.pos.z + Math.cos(camYaw) * 9.5);
