@@ -31,7 +31,9 @@ body.building #help,body.building .btn{display:none!important}
 #book{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,30,50,.55);z-index:6}
 #book .inner{background:#fff8e1;border-radius:24px;padding:16px 20px;max-width:min(94vw,760px);max-height:90vh;overflow:auto;text-align:center;color:#4a2f00}
 #book h2{margin:4px 0}#book p{margin:4px 0 12px;font-weight:700;font-size:14px}
-#bookPages{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+#bookPages .pages{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+#bookPages h3{margin:14px 0 6px;font-size:20px;text-align:left}#bookPages h3 span{color:#e0621e}.lockline{text-align:left;margin:0 0 6px!important}.pg.lk{opacity:.55}
+#palette{flex-wrap:wrap;justify-content:center;max-width:96vw}#palette button.locked{opacity:.35;filter:grayscale(1)}
 .pg{background:#fff;border-radius:16px;padding:10px;box-shadow:0 3px 0 #e8d7a8}.pg.fr{background:#e9ffe6;box-shadow:0 3px 0 #9fd99a}
 .pg .ic{font-size:40px}.pg b{display:block;font-size:16px}.pg small{display:block;font-size:11px;opacity:.75;margin-top:4px}
 .need{margin-top:6px;font-size:22px}.need span{opacity:.35;margin:0 2px;filter:grayscale(1)}.need span.ok{opacity:1;filter:none}
@@ -60,7 +62,7 @@ body.touch #help{display:none}
 <div id="prompt" class="hud"></div>
 <div id="card" class="hud"><div class="t"></div><div class="s"></div></div>
 <div id="tread" class="hud"><i></i></div>
-<div id="help" class="hud">WASD move · SPACE jump · SHIFT roll · E buddy · B build (click place, right-click remove, 1–0 pick) · P book · drag to look</div>
+<div id="help" class="hud">WASD move · SPACE jump · SHIFT roll · E buddy · B build (click place, right-click remove, 1–9 / [ ] pick) · P book · drag to look</div>
 <div id="topbtns"><button id="bBuild" title="Build (B)">🧱</button><button id="bBook" title="Friend book (P)">📖</button><button id="reset" title="Start over">↺</button></div>
 <div id="palette"></div>
 <div id="book"><div class="inner"><h2>📖 My Friends</h2><p>Build what they like + keep their snack in the 🧺 Pantry. 3 visits = a friend!</p><div id="bookPages"></div><button id="bookClose">✔ OK</button></div></div>

@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { BOXES, groundAt, textSprite, toon, mesh, type Box } from './world';
 import { blockGeo, blockMaterial, makeAnimal, makePantry, makeSpecial } from './models';
-import { S, save, type Food } from './save';
+import { S, save, pantry, addPantry } from './save';
+import { FOOD_ICON, type Food } from './snacks';
 import { burst, card, floatText, hint, hud, say } from './fx';
 import { sfx } from './audio';
 
@@ -11,32 +12,43 @@ const flat = (a: THREE.Vector3, b: THREE.Vector3) => Math.hypot(a.x - b.x, a.z -
 function angleLerp(a: number, b: number, t: number) { const d = ((b - a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; return a + d * t; }
 
 // ---------------- palette ----------------
-export interface Tool { id: string; icon: string; name: string; cost: number; block: boolean }
+export interface Tool { id: string; icon: string; name: string; cost: number; block: boolean; biome?: string }
 export const PALETTE: Tool[] = [
   { id: 'grass', icon: '🟩', name: 'Grass', cost: 0, block: true },
   { id: 'wood', icon: '🟫', name: 'Wood', cost: 0, block: true },
-  { id: 'stone', icon: '⬜', name: 'Stone', cost: 0, block: true },
+  { id: 'stone', icon: '🪨', name: 'Stone', cost: 0, block: true },
   { id: 'brick', icon: '🧱', name: 'Brick', cost: 0, block: true },
   { id: 'flower', icon: '🌸', name: 'Flowers', cost: 0, block: false },
   { id: 'hay', icon: '🌾', name: 'Hay', cost: 25, block: false },
   { id: 'pond', icon: '💧', name: 'Pond', cost: 30, block: false },
   { id: 'birdhouse', icon: '🏠', name: 'Birdhouse', cost: 40, block: false },
   { id: 'swing', icon: '🎠', name: 'Swing', cost: 60, block: false },
+  { id: 'snow', icon: '⬜', name: 'Snow', cost: 0, block: true, biome: 'snow' },
+  { id: 'ice', icon: '🧊', name: 'Ice', cost: 0, block: true, biome: 'snow' },
+  { id: 'snowman', icon: '⛄', name: 'Snowman', cost: 30, block: false, biome: 'snow' },
+  { id: 'igloo', icon: '🛖', name: 'Igloo', cost: 50, block: false, biome: 'snow' },
   { id: 'erase', icon: '⛏️', name: 'Remove', cost: 0, block: false },
 ];
 const TOOL: Record<string, Tool> = Object.fromEntries(PALETTE.map((t) => [t.id, t]));
-export const FOOD_ICON: Record<Food, string> = { s: '🍓', m: '🍯', b: '🍉', gold: '✨' };
+export { FOOD_ICON };
+export const toolLocked = (t: Tool) => !!t.biome && !S.visited.includes(t.biome);
 
 // ---------------- animals ----------------
-export interface AnimalDef { type: string; name: string; icon: string; food: Food; needs: { id: string; n: number }[]; power: string }
+export interface AnimalDef { type: string; name: string; icon: string; food: Food; needs: { id: string; n: number }[]; power: string; biome: 'valley' | 'snow'; ride?: { speed: number; jump: number; seat: number } }
 export const ANIMALS: AnimalDef[] = [
-  { type: 'hen', name: 'Hen', icon: '🐔', food: 's', needs: [], power: '+2 🪙 for every snack' },
-  { type: 'bunny', name: 'Bunny', icon: '🐰', food: 's', needs: [{ id: 'flower', n: 3 }], power: 'Jump higher' },
-  { type: 'turtle', name: 'Turtle', icon: '🐢', food: 's', needs: [{ id: 'pond', n: 1 }], power: 'Blocks one hen hit' },
-  { type: 'fox', name: 'Fox', icon: '🦊', food: 'm', needs: [{ id: 'hay', n: 1 }], power: 'Run 10% faster' },
-  { type: 'bear', name: 'Bear', icon: '🐻', food: 'm', needs: [{ id: 'swing', n: 1 }], power: 'Bigger gifts' },
-  { type: 'raccoon', name: 'Raccoon', icon: '🦝', food: 'b', needs: [{ id: 'blocks', n: 12 }], power: 'Carry snacks with no slowdown' },
-  { type: 'deer', name: 'Golden Deer', icon: '🦌', food: 'gold', needs: [{ id: 'birdhouse', n: 1 }, { id: 'flower', n: 5 }], power: 'Faster AND higher jump' },
+  { type: 'hen', name: 'Hen', icon: '🐔', food: 'strawberry', needs: [], power: '+2 🪙 for every snack', biome: 'valley' },
+  { type: 'bunny', name: 'Bunny', icon: '🐰', food: 'strawberry', needs: [{ id: 'flower', n: 3 }], power: 'Jump higher', biome: 'valley' },
+  { type: 'turtle', name: 'Turtle', icon: '🐢', food: 'strawberry', needs: [{ id: 'pond', n: 1 }], power: 'Blocks one hit', biome: 'valley' },
+  { type: 'fox', name: 'Fox', icon: '🦊', food: 'honey', needs: [{ id: 'hay', n: 1 }], power: 'Run 10% faster', biome: 'valley' },
+  { type: 'bear', name: 'Bear', icon: '🐻', food: 'honey', needs: [{ id: 'swing', n: 1 }], power: 'Bigger gifts', biome: 'valley' },
+  { type: 'raccoon', name: 'Raccoon', icon: '🦝', food: 'melon', needs: [{ id: 'blocks', n: 12 }], power: 'Carry snacks with no slowdown', biome: 'valley' },
+  { type: 'deer', name: 'Golden Deer', icon: '🦌', food: 'gold', needs: [{ id: 'birdhouse', n: 1 }, { id: 'flower', n: 5 }], power: 'RIDE it! Fast with a big jump', biome: 'valley', ride: { speed: 1.55, jump: 12, seat: 0.95 } },
+  { type: 'penguin', name: 'Penguin', icon: '🐧', food: 'cookie', needs: [{ id: 'ice', n: 6 }], power: 'No slipping on ice', biome: 'snow' },
+  { type: 'arcticfox', name: 'Snow Fox', icon: '🦊', food: 'cookie', needs: [{ id: 'snowman', n: 1 }], power: 'Snowball grows 2× faster', biome: 'snow' },
+  { type: 'owl', name: 'Snowy Owl', icon: '🦉', food: 'cocoa', needs: [{ id: 'birdhouse', n: 1 }, { id: 'snow', n: 6 }], power: 'Hold JUMP to glide', biome: 'snow' },
+  { type: 'yak', name: 'Yak', icon: '🐂', food: 'cocoa', needs: [{ id: 'hay', n: 2 }], power: 'RIDE it! Steady on ice', biome: 'snow', ride: { speed: 1.35, jump: 9.5, seat: 1.1 } },
+  { type: 'polarbear', name: 'Polar Cub', icon: '🐻‍❄️', food: 'cake', needs: [{ id: 'igloo', n: 1 }], power: 'Rams can’t knock you over', biome: 'snow' },
+  { type: 'leopard', name: 'Snow Leopard', icon: '🐆', food: 'gold', needs: [{ id: 'igloo', n: 1 }, { id: 'snowman', n: 1 }, { id: 'ice', n: 10 }], power: 'Faster AND higher jump', biome: 'snow' },
 ];
 const DEF: Record<string, AnimalDef> = Object.fromEntries(ANIMALS.map((a) => [a.type, a]));
 const rec = (t: string) => (S.animals[t] ??= { visits: 0, friend: false });
@@ -59,6 +71,10 @@ let scene: THREE.Scene;
 let Pref: { pos: THREE.Vector3 };
 let ghost: THREE.Group, ghostMat: THREE.MeshBasicMaterial;
 export const build = { on: false, tool: 0 };
+export const ride = { on: false, type: '' };
+let campFull = true;
+export const rideDef = () => ANIMALS.find((a) => a.type === ride.type)?.ride ?? null;
+export const buddyCritter = () => critters.find((c) => c.state === 'home' && c.def.type === S.buddy) ?? null;
 
 function addVoxel(ix: number, iy: number, iz: number, id: string) {
   const t = TOOL[id]; let obj: THREE.Object3D, box: Box | null = null;
@@ -80,6 +96,7 @@ export function place(ix: number, iy: number, iz: number, id = PALETTE[build.too
   if (!t.block) { const below = vox.get(key(ix, iy - 1, iz)); if (iy > 0 && !(below && TOOL[below.id].block)) { sfx.no(); return false; } }
   else { const p = Pref.pos; if (p.x + 0.45 > ix && p.x - 0.45 < ix + 1 && p.z + 0.45 > iz && p.z - 0.45 < iz + 1 && p.y < iy + 1 && p.y + 1.6 > iy) { sfx.no(); return false; } }
   if (vox.size >= 400) { say('Your camp is full of blocks!'); return false; }
+  if (toolLocked(t)) { sfx.no(); say(`${t.icon} ${t.name} comes from Snow Mountain — visit it first!`); return false; }
   if (t.cost > S.coins) { sfx.no(); say(`${t.icon} ${t.name} costs ${t.cost} 🪙 — animals give coins as gifts!`); return false; }
   S.coins -= t.cost; addVoxel(ix, iy, iz, id); sfx.place();
   if (t.cost) { burst(new V3(ix + 0.5, iy + 0.6, iz + 0.5), [0xffd23f, 0xffffff, 0x7dff8a], 14, 3, 5); floatText(new V3(ix + 0.5, iy + 1.8, iz + 0.5), `-${t.cost} 🪙`, '#ffe14a', 0.6); }
@@ -151,23 +168,23 @@ function dropGift(at: THREE.Vector3, coins: number) {
 export function friendsCount() { return ANIMALS.filter((a) => S.animals[a.type]?.friend).length; }
 
 function trySpawnVisitor() {
-  if (critters.filter((c) => c.state !== 'home').length >= 2) return;
+  if (!campFull || critters.filter((c) => c.state !== 'home').length >= 2) return;
   const busy = new Set(critters.map((c) => c.def.type));
-  const cand = ANIMALS.filter((d) => !rec(d.type).friend && !busy.has(d.type) && S.pantry[d.food] > 0 && needMet(d));
+  const cand = ANIMALS.filter((d) => !rec(d.type).friend && !busy.has(d.type) && pantry(d.food) > 0 && needMet(d));
   if (!cand.length) return;
   const d = cand[Math.floor(Math.random() * cand.length)];
-  S.pantry[d.food]--; save();
+  addPantry(d.food, -1); save();
   spawnCritter(d, 'in', new V3(rnd(-3, 3), 0, -3)); sfx.cluck();
   say(`${d.icon} A ${d.name} is coming to visit!`, 3); hint('visit', `Visitors eat from your 🧺 Pantry and leave a 🎁 gift. ${VISITS_TO_FRIEND} visits = a new friend!`, true);
 }
 
 export function updateCamp(dt: number, P: { pos: THREE.Vector3; vel: THREE.Vector3; face: number }, act: boolean, time: number) {
   visitT -= dt; if (visitT <= 0) { visitT = 5; trySpawnVisitor(); }
-  hud.prompt = '';
   let near: Critter | null = null, nd = 2.6;
   for (const c of critters) {
     c.t += dt;
     const follow = c.state === 'home' && S.buddy === c.def.type;
+    if (follow && ride.on) { c.pos.copy(P.pos); c.target.copy(P.pos); c.m.position.copy(P.pos); c.m.rotation.y = P.face; c.hop += dt * Math.hypot(P.vel.x, P.vel.z) * 1.5; c.m.position.y += Math.abs(Math.sin(c.hop)) * 0.15; near = c; nd = 0; continue; }
     if (follow) { const back = new V3(Math.sin(P.face), 0, Math.cos(P.face)).multiplyScalar(-2.2); c.target.set(P.pos.x + back.x + 0.8, 0, P.pos.z + back.z); if (flat(c.pos, P.pos) > 25) c.pos.copy(c.target); }
     const dist = flat(c.pos, c.target);
     if (c.state === 'in' && dist < 0.4) { c.state = 'eat'; c.t = 0; bubble(c, `😋 ${FOOD_ICON[c.def.food]}`); sfx.coin(); }
@@ -181,7 +198,7 @@ export function updateCamp(dt: number, P: { pos: THREE.Vector3; vel: THREE.Vecto
         save();
       } else if (c.t > 3 && dist < 0.3) { const a = rnd(0, 6.28); c.target.set(c.pos.x + Math.cos(a) * 1.5, 0, c.pos.z + Math.sin(a) * 1.5); }
     } else if (c.state === 'out' && dist < 0.4) { scene.remove(c.m); critters.splice(critters.indexOf(c), 1); continue; }
-    else if (c.state === 'home' && !follow) {
+    else if (c.state === 'home' && !follow && campFull) {
       c.coins += 0.15 * (buddyIs('bear') ? 1.5 : 1) * dt;
       if (dist < 0.3 && c.t > 3) { c.t = 0; c.target = Math.random() < 0.5 ? spotFor(c.def) : new V3(c.pos.x + rnd(-2, 2), 0, c.pos.z + rnd(-2, 2)); }
     }
@@ -202,24 +219,32 @@ export function updateCamp(dt: number, P: { pos: THREE.Vector3; vel: THREE.Vecto
     const g = gifts[i]; g.t += dt; g.m.rotation.y += dt; g.m.position.y = g.pos.y + Math.abs(Math.sin(g.t * 3)) * 0.15;
     if (flat(g.pos, P.pos) < 1.6) { S.coins += g.coins; scene.remove(g.m); gifts.splice(i, 1); sfx.buy(); floatText(g.pos.clone().add(new V3(0, 1.6, 0)), `🎁 +${g.coins} 🪙`, '#ffe14a', 0.9); burst(g.pos.clone().add(new V3(0, 0.5, 0)), [0xffe14a, 0xffffff], 16, 3, 5); hint('coins', 'Coins buy 🌾 💧 🏠 🎠 in build mode (B / 🧱). Each one brings a new animal — see the 📖 book!', true); save(); }
   }
-  if (near && !build.on) {
-    const isB = S.buddy === near.def.type;
-    hud.prompt = isB ? `${near.def.icon} ${near.def.name} is your buddy` : `Take ${near.def.icon} ${near.def.name} along (${near.def.power})`;
-    if (act && !isB) { S.buddy = near.def.type; sfx.buy(); floatText(near.pos.clone().add(new V3(0, 2.2, 0)), 'BUDDY!', '#7dff8a'); save(); }
+  if (near && !build.on && !hud.prompt) {
+    const isB = S.buddy === near.def.type, rd = near.def.ride;
+    if (isB && rd) {
+      hud.prompt = ride.on ? `Hop off ${near.def.name}` : `Ride ${near.def.icon} ${near.def.name}!`;
+      if (act) { ride.on = !ride.on; ride.type = near.def.type; sfx.jump(); if (ride.on) hint('ride', `Riding! ${near.def.name}s are fast. Press E / ✋ again to hop off.`, true); }
+    } else {
+      hud.prompt = isB ? `${near.def.icon} ${near.def.name} is your buddy` : `Take ${near.def.icon} ${near.def.name} along (${near.def.power})`;
+      if (act && !isB) { S.buddy = near.def.type; ride.on = false; sfx.buy(); floatText(near.pos.clone().add(new V3(0, 2.2, 0)), 'BUDDY!', '#7dff8a'); save(); }
+    }
   }
+  if (ride.on && !critters.some((c) => c.state === 'home' && c.def.type === S.buddy)) ride.on = false;
 }
 
 // ---------------- the book ----------------
 export function bookData() {
   return ANIMALS.map((d) => {
     const r = S.animals[d.type] ?? { visits: 0, friend: false };
-    return { ...d, visits: r.visits, friend: r.friend, buddy: S.buddy === d.type, foodHave: S.pantry[d.food], needs: d.needs.map((n) => ({ icon: n.id === 'blocks' ? '🧱' : TOOL[n.id].icon, n: n.n, have: count(n.id) })) };
+    return { ...d, visits: r.visits, friend: r.friend, buddy: S.buddy === d.type, locked: !S.visited.includes(d.biome), foodHave: pantry(d.food), needs: d.needs.map((n) => ({ icon: n.id === 'blocks' ? '🧱' : TOOL[n.id].icon, n: n.n, have: count(n.id) })) };
   });
 }
 
 // ---------------- setup ----------------
-export function initCamp(sc: THREE.Scene, P: { pos: THREE.Vector3 }) {
-  scene = sc; Pref = P;
+export function initCamp(sc: THREE.Scene, P: { pos: THREE.Vector3 }, full: boolean) {
+  scene = sc; Pref = P; campFull = full;
+  vox.clear(); critters.length = 0; gifts.length = 0; ride.on = false; build.on = false;
+  if (!full) { const d = ANIMALS.find((a) => a.type === S.buddy); if (d && S.animals[d.type]?.friend) spawnCritter(d, 'home', P.pos.clone().add(new V3(1.5, 0, 2))); return; }
   const pan = makePantry(); pan.position.set(PANTRY.x, 0, PANTRY.z); scene.add(pan);
   BOXES.push({ x0: PANTRY.x - 1.6, x1: PANTRY.x + 1.6, z0: PANTRY.z - 0.8, z1: PANTRY.z + 0.8, y0: -1, top: 1 });
   ghostMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, depthWrite: false });
