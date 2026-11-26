@@ -119,7 +119,8 @@ export function loadArea(id: Biome['id'], arriving = false) {
   if (!S.visited.includes(id)) { S.visited.push(id); if (id === 'snow') card('❄️ SNOW MOUNTAIN!', 'New snacks, new friends — and new blocks for your camp', false); }
   save();
   onArea(biome);
-  hint(`start-${id}`, biome.startTip, true);
+  if (!inValley() && arriving) { const b = buddyCritter(); say(b ? `${b.def.icon} ${b.def.name} came along! Your other friends and the treadmill wait at home in the valley.` : 'Your friends and the treadmill wait at home in the valley. Tip: pick a buddy (E near a friend) to bring one along!', 5); }
+  else hint(`start-${id}`, biome.startTip, true);
 }
 export function init(sc: THREE.Scene, cam: THREE.PerspectiveCamera, areaCb: (b: Biome) => void) {
   scene = sc; camera = cam; setFxScene(sc); onArea = areaCb;
